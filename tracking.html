@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Bus Tracking — SwiftBus</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    #trackMap { border:2px solid var(--glass-border); }
+    .departure-notice {
+      background: rgba(245,158,11,0.12);
+      border: 1px solid rgba(245,158,11,0.35);
+      color: #FBBF24;
+      padding: 1.25rem 1.5rem;
+      border-radius: 14px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-weight: 500;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .departure-notice i { font-size: 1.5rem; flex-shrink: 0; }
+    .departure-notice.arrived {
+      background: rgba(16,185,129,0.12);
+      border-color: rgba(16,185,129,0.35);
+      color: #6EE7B7;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/" class="logo"><i class="fa-solid fa-bus-simple"></i> SwiftBus</a>
+    <div class="nav-links" id="navLinks">
+      <a href="/"><i class="fa-solid fa-house"></i> Home</a>
+      <a href="/search"><i class="fa-solid fa-search"></i> Search</a>
+      <a href="/my-bookings"><i class="fa-solid fa-ticket"></i> My Bookings</a>
+      <a href="/tracking" class="active"><i class="fa-solid fa-location-dot"></i> Track Bus</a>
+      <a href="#" onclick="logout();return false;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </div>
+  </nav>
+
+  <div class="tracking-container">
+    <h2 style="font-size:1.4rem; font-weight:700; margin-bottom:1.5rem; display:flex; align-items:center; gap:.6rem;">
+      <i class="fa-solid fa-satellite-dish" style="color:var(--primary-light);"></i> Live Bus Tracking (Simulation)
+    </h2>
+
+    <!-- Notice banner (shown when bus hasn't departed) -->
+    <div id="departureNotice" class="departure-notice" style="display:none;"></div>
+
+    <div class="tracking-grid">
+      <!-- Map -->
+      <div id="trackMap"></div>
+
+      <!-- Info Panel -->
+      <div class="glass track-info">
+        <div class="track-stat">
+          <div class="stat-label">Bus Number</div>
+          <div class="stat-value" id="trackBusNum">SB-101</div>
+        </div>
+        <div class="track-stat">
+          <div class="stat-label">Route</div>
+          <div class="stat-value" id="trackRoute">Hyderabad → Bangalore</div>
+        </div>
+        <div class="track-stat">
+          <div class="stat-label">Travel Date</div>
+          <div class="stat-value" id="trackDate" style="color:var(--accent);">—</div>
+        </div>
+        <div class="track-stat">
+          <div class="stat-label">Departure Time</div>
+          <div class="stat-value" id="trackDepTime" style="color:var(--accent);">—</div>
+        </div>
+        <div class="track-stat">
+          <div class="stat-label">Current Location</div>
+          <div class="stat-value" style="color:var(--success);" id="trackLocation">Waiting…</div>
+        </div>
+        <div class="track-stat">
+          <div class="stat-label">Journey Progress</div>
+          <div class="stat-value" id="trackProgress">0%</div>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="track-stat">
+          <div class="stat-label">Estimated Arrival</div>
+          <div class="stat-value" style="color:var(--accent);" id="trackETA">—</div>
+        </div>
+        <div class="track-stat">
+          <div class="stat-label">Speed</div>
+          <div class="stat-value" id="trackSpeed">0 km/h</div>
+        </div>
+        <div class="track-stat">
+          <div class="stat-label">Status</div>
+          <div class="stat-value" style="color:var(--primary-light);" id="trackStatus">
+            <i class="fa-solid fa-circle" style="font-size:.6rem;color:var(--muted);"></i> Not Started
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="startTrackBtn" style="margin-top:1rem;">
+          <i class="fa-solid fa-play"></i> Start Simulation
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/js/auth.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      if (!localStorage.getItem('swiftbus_user')) { window.location.href = '/login'; return; }
+
+      // ---- City Geolocation Data ----
+      const cityCoords = {
+        'Hyderabad': { lat: 17.3850, lng: 78.4867 },
+        'Bangalore': { lat: 12.9716, lng: 77.5946 },
+        'Chennai':   { lat: 13.0827, lng: 80.2707 },
+        'Mumbai':    { lat: 19.0760, lng: 72.8777 }
+      };
+
+      const booking = JSON.parse(localStorage.getItem('swiftbus_booking') || 'null');
+      
+      let waypoints = [];
+      if (booking && cityCoords[booking.source] && cityCoords[booking.destination]) {
+          const startPt = cityCoords[booking.source];
+          const endPt = cityCoords[booking.destination];
+
+          // Generate 10 straight-line waypoints for smoothly simulating travel
+          for (let i = 0; i <= 10; i++) {
+              const t = i / 10;
+              waypoints.push({
+                  lat: startPt.lat + (endPt.lat - startPt.lat) * t,
+                  lng: startPt.lng + (endPt.lng - startPt.lng) * t,
+                  name: i === 0 ? booking.source : (i === 10 ? booking.destination : 'Highway')
+              });
+          }
+      } else {
+          // Fallback map data
+          waypoints = [
+            { lat: 17.3850, lng: 78.4867, name: 'Hyderabad' },
+            { lat: 12.9716, lng: 77.5946, name: 'Bangalore' }
+          ];
+      }
+
+      // ---- Initialize Map ----
+      const map = L.map('trackMap').setView([15.2, 77.8], 7);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      // Draw route line
+      const routeCoords = waypoints.map(w => [w.lat, w.lng]);
+      const routeLine = L.polyline(routeCoords, { color: '#6366F1', weight: 4, opacity: 0.7, dashArray: '10 6' }).addTo(map);
+
+      // Add start & end markers
+      const startIcon = L.divIcon({ className: '', html: '<div style="background:#10B981;color:#fff;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.3);">S</div>' });
+      const endIcon = L.divIcon({ className: '', html: '<div style="background:#EF4444;color:#fff;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.3);">D</div>' });
+
+      L.marker([waypoints[0].lat, waypoints[0].lng], { icon: startIcon }).addTo(map).bindPopup(`Start: ${waypoints[0].name}`);
+      L.marker([waypoints[waypoints.length - 1].lat, waypoints[waypoints.length - 1].lng], { icon: endIcon }).addTo(map).bindPopup(`End: ${waypoints[waypoints.length - 1].name}`);
+
+      // Bus marker
+      const busIcon = L.divIcon({
+        className: '',
+        html: '<div style="background:#6366F1;color:#fff;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:16px;box-shadow:0 4px 12px rgba(99,102,241,.5);border:3px solid #fff;"><i class="fa-solid fa-bus"></i></div>',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+      let busMarker = L.marker([waypoints[0].lat, waypoints[0].lng], { icon: busIcon }).addTo(map);
+
+      map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+
+      // ---- Interpolation helpers ----
+      function interpolate(p1, p2, t) {
+        return { lat: p1.lat + (p2.lat - p1.lat) * t, lng: p1.lng + (p2.lng - p1.lng) * t };
+      }
+
+      // ---- Read booking & determine bus status ----
+      const startBtn = document.getElementById('startTrackBtn');
+      const noticeEl = document.getElementById('departureNotice');
+
+      let canSimulate = false; // only true if bus has departed
+
+      if (booking) {
+        document.getElementById('trackBusNum').textContent = booking.busNumber;
+        document.getElementById('trackRoute').textContent = `${booking.source} → ${booking.destination}`;
+        document.getElementById('trackDate').textContent = booking.date || '—';
+        document.getElementById('trackDepTime').textContent = booking.time || '—';
+
+        // Parse travel date + time to determine bus status
+        const travelDateStr = booking.date;  // e.g. "2026-03-25"
+        const travelTimeStr = booking.time;  // e.g. "22:00" or "10:00 PM"
+
+        const now = new Date();
+        let departureDate = null;
+
+        if (travelDateStr) {
+          // Build departure datetime
+          departureDate = new Date(travelDateStr);
+
+          // Parse time (handles "HH:MM", "H:MM AM/PM", etc.)
+          if (travelTimeStr) {
+            const timeParts = travelTimeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+            if (timeParts) {
+              let hours = parseInt(timeParts[1]);
+              const mins = parseInt(timeParts[2]);
+              const ampm = timeParts[3];
+              if (ampm) {
+                if (ampm.toUpperCase() === 'PM' && hours !== 12) hours += 12;
+                if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+              }
+              departureDate.setHours(hours, mins, 0, 0);
+            }
+          }
+        }
+
+        if (departureDate) {
+          const totalJourneyMs = 6.5 * 60 * 60 * 1000; // ~6.5 hours
+          const arrivalDate = new Date(departureDate.getTime() + totalJourneyMs);
+
+          if (now < departureDate) {
+            // BUS NOT DEPARTED YET
+            canSimulate = false;
+            const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+            const depDateFmt = departureDate.toLocaleDateString('en-IN', options);
+            const depTimeFmt = travelTimeStr;
+
+            noticeEl.style.display = 'flex';
+            noticeEl.innerHTML = `<i class="fa-solid fa-clock"></i>
+              <div><strong>Bus has not departed yet.</strong><br>
+              Scheduled departure: <strong>${depDateFmt}</strong> at <strong>${depTimeFmt}</strong>.<br>
+              Tracking will be available once the bus starts its journey.</div>`;
+
+            document.getElementById('trackLocation').textContent = 'At Origin (Not Departed)';
+            document.getElementById('trackStatus').innerHTML = '<i class="fa-solid fa-circle" style="font-size:.6rem;color:var(--accent);"></i> Scheduled';
+            document.getElementById('trackETA').textContent = 'Waiting for departure';
+            document.getElementById('trackProgress').textContent = '0%';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('trackSpeed').textContent = '0 km/h';
+
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<i class="fa-solid fa-clock"></i> Not Departed Yet';
+
+          } else if (now > arrivalDate) {
+            // JOURNEY COMPLETE (past arrival)
+            canSimulate = false;
+
+            noticeEl.style.display = 'flex';
+            noticeEl.classList.add('arrived');
+            noticeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i>
+              <div><strong>Journey Complete!</strong><br>The bus has reached its destination.</div>`;
+
+            document.getElementById('trackLocation').textContent = `${booking.destination} (Arrived)`;
+            document.getElementById('trackStatus').innerHTML = '<i class="fa-solid fa-circle" style="font-size:.6rem;color:var(--accent);"></i> Journey Complete';
+            document.getElementById('trackETA').textContent = 'Arrived!';
+            document.getElementById('trackProgress').textContent = '100%';
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('trackSpeed').textContent = '0 km/h';
+
+            // Move bus to destination
+            busMarker.setLatLng([waypoints[waypoints.length - 1].lat, waypoints[waypoints.length - 1].lng]);
+
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<i class="fa-solid fa-check"></i> Journey Complete';
+
+          } else {
+            // BUS IS ON THE ROAD — simulation allowed
+            canSimulate = true;
+
+            // Calculate how far along the journey we actually are
+            const elapsed = now.getTime() - departureDate.getTime();
+            const realProgress = Math.min(elapsed / totalJourneyMs, 1);
+            const realPct = Math.round(realProgress * 100);
+
+            // Position the bus at the real estimated location
+            const totalSegments = waypoints.length - 1;
+            const segFloat = realProgress * totalSegments;
+            const segIdx = Math.min(Math.floor(segFloat), totalSegments - 1);
+            const segT = segFloat - segIdx;
+            const pos = interpolate(waypoints[segIdx], waypoints[segIdx + 1], segT);
+            busMarker.setLatLng([pos.lat, pos.lng]);
+
+            document.getElementById('trackLocation').textContent = `Near ${waypoints[segIdx].name}`;
+            document.getElementById('trackProgress').textContent = `${realPct}%`;
+            document.getElementById('progressFill').style.width = `${realPct}%`;
+            document.getElementById('trackStatus').innerHTML = '<i class="fa-solid fa-circle" style="font-size:.6rem;color:var(--success);"></i> On Route';
+
+            const remainingMin = Math.round((1 - realProgress) * 390);
+            const hrs = Math.floor(remainingMin / 60);
+            const mins = remainingMin % 60;
+            document.getElementById('trackETA').textContent = `${hrs}h ${mins}m remaining`;
+            document.getElementById('trackSpeed').textContent = `${60 + Math.floor(Math.random() * 30)} km/h`;
+          }
+        } else {
+          // No valid date — allow simulation as fallback
+          canSimulate = true;
+          document.getElementById('trackStatus').innerHTML = '<i class="fa-solid fa-circle" style="font-size:.6rem;color:var(--success);"></i> Ready';
+        }
+      } else {
+        // No booking at all
+        noticeEl.style.display = 'flex';
+        noticeEl.innerHTML = `<i class="fa-solid fa-info-circle"></i>
+          <div><strong>No active booking found.</strong><br>Please book a bus first to use tracking.</div>`;
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<i class="fa-solid fa-ban"></i> No Booking';
+      }
+
+      // ---- Simulation (only when bus has departed) ----
+      let step = 0;
+      const totalSteps = 200;
+      let interval = null;
+
+      startBtn.addEventListener('click', function () {
+        if (!canSimulate || interval) return;
+        this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Tracking…';
+        this.disabled = true;
+        step = 0;
+
+        interval = setInterval(() => {
+          step++;
+          const pct = step / totalSteps;
+
+          const totalSegments = waypoints.length - 1;
+          const segFloat = pct * totalSegments;
+          const segIdx = Math.min(Math.floor(segFloat), totalSegments - 1);
+          const segT = segFloat - segIdx;
+
+          const pos = interpolate(waypoints[segIdx], waypoints[segIdx + 1], segT);
+          busMarker.setLatLng([pos.lat, pos.lng]);
+
+          const progressPct = Math.round(pct * 100);
+          document.getElementById('trackProgress').textContent = `${progressPct}%`;
+          document.getElementById('progressFill').style.width = `${progressPct}%`;
+          document.getElementById('trackLocation').textContent = `Near ${waypoints[segIdx].name}`;
+          document.getElementById('trackSpeed').textContent = `${60 + Math.floor(Math.random() * 30)} km/h`;
+
+          const remainingMin = Math.round((1 - pct) * 390);
+          const hrs = Math.floor(remainingMin / 60);
+          const mins = remainingMin % 60;
+          document.getElementById('trackETA').textContent = `${hrs}h ${mins}m remaining`;
+
+          if (step >= totalSteps) {
+            clearInterval(interval);
+            const destName = booking ? booking.destination : 'Destination';
+            document.getElementById('trackLocation').textContent = `${destName} (Arrived)`;
+            document.getElementById('trackETA').textContent = 'Arrived!';
+            document.getElementById('trackStatus').innerHTML = '<i class="fa-solid fa-circle" style="font-size:.6rem;color:var(--accent);"></i> Journey Complete';
+            document.getElementById('trackSpeed').textContent = '0 km/h';
+          }
+        }, 150);
+      });
+
+    })();
+  </script>
+</body>
+</html>

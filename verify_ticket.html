@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket Verification — SwiftBus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:   #10B981;
+      --green-bg: rgba(16,185,129,.12);
+      --green-br: rgba(16,185,129,.35);
+      --red:    #EF4444;
+      --red-bg:  rgba(239,68,68,.12);
+      --red-br:  rgba(239,68,68,.35);
+      --yellow: #F59E0B;
+      --yellow-bg: rgba(245,158,11,.12);
+      --yellow-br: rgba(245,158,11,.35);
+      --indigo: #6366F1;
+      --surface: #0F172A;
+      --surface2: #1E293B;
+      --surface3: #334155;
+      --text:   #F1F5F9;
+      --muted:  #94A3B8;
+      --border: rgba(255,255,255,.08);
+    }
+
+    html { font-family: 'Inter', system-ui, sans-serif; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #0F172A 100%);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 1.5rem 1rem 3rem;
+      color: var(--text);
+    }
+
+    /* ── container ─────────────────────────────── */
+    .page { width: 100%; max-width: 480px; }
+
+    /* ── brand header ───────────────────────────── */
+    .brand-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .6rem;
+      margin-bottom: 1.5rem;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #818CF8;
+      letter-spacing: -.3px;
+    }
+    .brand-header i { font-size: 1.2rem; }
+    .brand-header span { color: var(--muted); font-weight: 500; font-size: .8rem; margin-left:.5rem; }
+
+    /* ── status badge ───────────────────────────── */
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.1rem 1.4rem;
+      border-radius: 18px;
+      margin-bottom: 1.25rem;
+      border: 1.5px solid;
+      animation: pop .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes pop { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .status-badge.valid   { background: var(--green-bg);  border-color: var(--green-br);  }
+    .status-badge.invalid { background: var(--red-bg);    border-color: var(--red-br);    }
+    .status-badge.cancelled { background: var(--yellow-bg); border-color: var(--yellow-br); }
+
+    .badge-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+    .valid   .badge-icon { background: rgba(16,185,129,.2);  color: var(--green);  }
+    .invalid .badge-icon { background: rgba(239,68,68,.2);   color: var(--red);    }
+    .cancelled .badge-icon { background: rgba(245,158,11,.2); color: var(--yellow); }
+
+    .badge-text h2 { font-size: 1.15rem; font-weight: 800; }
+    .badge-text p  { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+    .valid   .badge-text h2 { color: #6EE7B7; }
+    .invalid .badge-text h2 { color: #FCA5A5; }
+    .cancelled .badge-text h2 { color: #FDE68A; }
+
+    /* ── card ───────────────────────────────────── */
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0,0,0,.5);
+    }
+
+    /* route strip */
+    .route-strip {
+      background: linear-gradient(135deg, rgba(99,102,241,.25), rgba(99,102,241,.08));
+      border-bottom: 1px solid rgba(99,102,241,.25);
+      padding: 1.4rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .city { flex: 1; }
+    .city .name { font-size: 1.5rem; font-weight: 800; color: #E2E8F0; line-height: 1; }
+    .city .label { font-size: .68rem; font-weight: 700; text-transform: uppercase;
+                   letter-spacing: .8px; color: var(--indigo); margin-top: 4px; }
+
+    .arrow-col { text-align: center; flex-shrink: 0; }
+    .arrow-col i { font-size: 1.3rem; color: #6366F1; }
+    .arrow-col small { display: block; font-size: .65rem; color: var(--muted);
+                       font-weight: 600; margin-top: 2px; letter-spacing: .5px; }
+
+    /* details grid */
+    .details { padding: 1.4rem 1.5rem; display: grid;
+               grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+
+    .field .lbl {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--muted); margin-bottom: 3px;
+      display: flex; align-items: center; gap: .35rem;
+    }
+    .field .lbl i { font-size: .62rem; }
+    .field .val {
+      font-size: .98rem; font-weight: 600; color: #E2E8F0;
+      word-break: break-word;
+    }
+    .field .val.accent { color: #818CF8; font-size: 1.05rem; font-weight: 800; }
+    .field .val.seats  { color: #34D399; font-weight: 700; }
+
+    /* booking ID full-width */
+    .booking-id-row {
+      grid-column: 1 / -1;
+      background: rgba(99,102,241,.08);
+      border: 1px solid rgba(99,102,241,.2);
+      border-radius: 12px;
+      padding: .9rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .booking-id-row .lbl { font-size: .7rem; font-weight: 700; color: var(--muted);
+                           text-transform: uppercase; letter-spacing: .6px; }
+    .booking-id-row .val { font-size: 1.3rem; font-weight: 900; color: #818CF8; letter-spacing: 1px; }
+
+    /* footer */
+    .card-footer {
+      border-top: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-footer .stamp {
+      font-size: .72rem; color: var(--muted); line-height: 1.4;
+    }
+    .card-footer .stamp strong { color: #94A3B8; }
+    .card-footer .logo { font-size: .9rem; font-weight: 800; color: #6366F1; }
+
+    /* ── invalid / not found ────────────────────── */
+    .not-found {
+      text-align: center;
+      padding: 3rem 2rem;
+    }
+    .not-found .icon-circle {
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      background: var(--red-bg);
+      border: 1.5px solid var(--red-br);
+      display: grid; place-items: center;
+      margin: 0 auto 1.5rem;
+      font-size: 2.5rem; color: #F87171;
+      animation: pop .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    .not-found h2 { font-size: 1.4rem; font-weight: 800; color: #FCA5A5; margin-bottom: .5rem; }
+    .not-found p  { color: var(--muted); font-size: .9rem; line-height: 1.7; }
+
+    /* ── home button ────────────────────────────── */
+    .home-btn {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      margin-top: 1.5rem;
+      padding: .85rem 1.5rem;
+      border-radius: 14px;
+      background: rgba(99,102,241,.15);
+      border: 1px solid rgba(99,102,241,.3);
+      color: #A5B4FC;
+      font-weight: 700; font-size: .9rem;
+      text-decoration: none;
+      transition: background .2s, transform .15s;
+    }
+    .home-btn:hover { background: rgba(99,102,241,.28); transform: translateY(-2px); }
+
+    /* ── responsive ─────────────────────────────── */
+    @media (max-width: 400px) {
+      .city .name { font-size: 1.2rem; }
+      .details { grid-template-columns: 1fr; gap: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Brand -->
+    <div class="brand-header">
+      <i class="fa-solid fa-bus-simple"></i> SwiftBus
+      <span>· Ticket Verification</span>
+    </div>
+
+    {% if found and ticket %}
+
+      <!-- Status Badge -->
+      {% if ticket.is_valid %}
+      <div class="status-badge valid">
+        <div class="badge-icon"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="badge-text">
+          <h2>✅ Valid Ticket</h2>
+          <p>Booking confirmed and active</p>
+        </div>
+      </div>
+
+      {% elif ticket.status == 'Cancelled' %}
+      <div class="status-badge cancelled">
+        <div class="badge-icon"><i class="fa-solid fa-ban"></i></div>
+        <div class="badge-text">
+          <h2>⚠️ Cancelled Ticket</h2>
+          <p>This booking has been cancelled</p>
+        </div>
+      </div>
+
+      {% else %}
+      <div class="status-badge invalid">
+        <div class="badge-icon"><i class="fa-solid fa-circle-xmark"></i></div>
+        <div class="badge-text">
+          <h2>❌ Invalid Ticket</h2>
+          <p>Status: {{ ticket.status }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Details Card -->
+      <div class="card">
+
+        <!-- Route strip -->
+        <div class="route-strip">
+          <div class="city">
+            <div class="name">{{ ticket.source }}</div>
+            <div class="label">From</div>
+          </div>
+          <div class="arrow-col">
+            <i class="fa-solid fa-arrow-right-long"></i>
+            <small>{{ ticket.bus_type }}</small>
+          </div>
+          <div class="city" style="text-align:right;">
+            <div class="name">{{ ticket.destination }}</div>
+            <div class="label">To</div>
+          </div>
+        </div>
+
+        <!-- Detail fields -->
+        <div class="details">
+
+          <!-- Booking ID full row -->
+          <div class="booking-id-row">
+            <span class="lbl"><i class="fa-solid fa-hashtag"></i> Booking ID</span>
+            <span class="val">#{{ ticket.booking_id }}</span>
+          </div>
+
+          <div class="field">
+            <div class="lbl"><i class="fa-solid fa-user"></i> Passenger</div>
+            <div class="val">{{ ticket.passenger_name }}</div>
+          </div>
+
+          <div class="field">
+            <div class="lbl"><i class="fa-solid fa-phone"></i> Mobile</div>
+            <div class="val">{{ ticket.mobile }}</div>
+          </div>
+
+          <div class="field">
+            <div class="lbl"><i class="fa-solid fa-bus"></i> Bus Name</div>
+            <div class="val accent">{{ ticket.bus_name }}</div>
+          </div>
+
+          <div class="field">
+            <div class="lbl"><i class="fa-solid fa-chair"></i> Seat(s) Booked</div>
+            <div class="val seats">{{ ticket.seats_booked }}</div>
+          </div>
+
+          <div class="field">
+            <div class="lbl"><i class="fa-solid fa-calendar-days"></i> Travel Date</div>
+            <div class="val">{{ ticket.travel_date }}</div>
+          </div>
+
+          <div class="field">
+            <div class="lbl"><i class="fa-solid fa-clock"></i> Departure</div>
+            <div class="val">{{ ticket.departure_time }}</div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="card-footer">
+          <div class="stamp">
+            Verified on <strong>{{ now }}</strong><br>
+            Booked on {{ ticket.booking_date }}
+          </div>
+          <div class="logo"><i class="fa-solid fa-bus-simple"></i> SwiftBus</div>
+        </div>
+
+      </div><!-- end card -->
+
+    {% else %}
+
+      <!-- Not Found -->
+      <div class="card">
+        <div class="not-found">
+          <div class="icon-circle"><i class="fa-solid fa-circle-xmark"></i></div>
+          <h2>❌ Invalid Ticket</h2>
+          <p>No booking found for this ID.<br>
+             The ticket may not exist or the QR code may be invalid.</p>
+        </div>
+      </div>
+
+    {% endif %}
+
+    <a href="/" class="home-btn">
+      <i class="fa-solid fa-house"></i> Go to SwiftBus Home
+    </a>
+
+  </div>
+</body>
+</html>

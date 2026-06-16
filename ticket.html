@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Ticket — SwiftBus</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    .ticket-wrapper {
+      max-width: 880px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeUp .5s ease-out;
+    }
+
+    .success-bar {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, .12);
+      border: 1px solid rgba(16, 185, 129, .35);
+      color: #6EE7B7;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 2rem;
+      font-size: 1.05rem;
+    }
+
+    .success-bar.cancelled-bar {
+      background: rgba(239, 68, 68, .12);
+      border-color: rgba(239, 68, 68, .35);
+      color: #FCA5A5;
+    }
+
+    .ticket-card {
+      width: 100%;
+      background: #fff;
+      color: #1e293b;
+      border-radius: 18px;
+      display: flex;
+      overflow: hidden;
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, .55);
+      position: relative;
+    }
+
+    .ticket-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 240px;
+      border-right: 2px dashed #cbd5e1;
+      z-index: 5;
+    }
+
+    .cutout {
+      position: absolute;
+      right: 226px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--dark);
+      z-index: 6;
+    }
+
+    .cutout.top {
+      top: -14px;
+    }
+
+    .cutout.bottom {
+      bottom: -14px;
+    }
+
+    .ticket-main {
+      flex: 1;
+      padding: 2rem;
+    }
+
+    .ticket-stub {
+      width: 240px;
+      background: #f8fafc;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .tkt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .tkt-brand {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    .tkt-label {
+      font-size: .85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+    }
+
+    .route-visual {
+      display: flex;
+      align-items: center;
+      background: #f1f5f9;
+      padding: 1.5rem;
+      border-radius: 14px;
+      margin-bottom: 1.8rem;
+    }
+
+    .city-block {
+      flex: 1;
+      text-align: center;
+    }
+
+    .city-block h3 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .city-block small {
+      color: #64748b;
+      font-size: .82rem;
+    }
+
+    .path-line {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .line {
+      width: 100%;
+      height: 2px;
+      background: #cbd5e1;
+      position: relative;
+    }
+
+    .line::before,
+    .line::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      top: -3px;
+    }
+
+    .line::before {
+      left: 0
+    }
+
+    .line::after {
+      right: 0
+    }
+
+    .bus-icon-mid {
+      position: absolute;
+      top: -13px;
+      background: #f1f5f9;
+      padding: 0 8px;
+      color: var(--primary);
+      font-size: 1.1rem;
+    }
+
+    .bus-num-label {
+      margin-top: 6px;
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .route-map {
+      background: #f1f5f9;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .map-dots {
+      display: flex;
+      align-items: center;
+      flex: 1;
+    }
+
+    .map-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .map-line {
+      flex: 1;
+      height: 3px;
+      background: repeating-linear-gradient(90deg, var(--primary) 0px, var(--primary) 6px, transparent 6px, transparent 12px);
+    }
+
+    .map-stop {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 50px;
+    }
+
+    .map-stop small {
+      font-size: .7rem;
+      color: #64748b;
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+
+    .d-box span:first-child {
+      display: block;
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: #64748b;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .d-box span:last-child {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .stub-label {
+      font-size: .75rem;
+      color: #64748b;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-bottom: .4rem;
+    }
+
+    .booking-id {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 2px;
+      margin-bottom: 1.5rem;
+    }
+
+    #qrcode {
+      padding: 8px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+      margin-bottom: 1rem;
+    }
+
+    .stub-note {
+      font-size: .72rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+      width: 100%;
+      max-width: 880px;
+      flex-wrap: wrap;
+    }
+
+    .actions .btn {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    /* Cancel Modal */
+    .cancel-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(6px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cancel-modal-overlay.show {
+      display: flex;
+    }
+
+    .cancel-modal {
+      background: var(--dark-2);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      max-width: 460px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, .5);
+      animation: fadeUp .3s ease-out;
+    }
+
+    .cancel-modal .modal-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      margin: 0 auto 1.25rem;
+      display: grid;
+      place-items: center;
+      font-size: 1.6rem;
+      background: rgba(239, 68, 68, .15);
+      color: #FCA5A5;
+      border: 1px solid rgba(239, 68, 68, .3);
+    }
+
+    .cancel-modal h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: .5rem;
+      color: #fff;
+    }
+
+    .cancel-modal p {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }
+
+    .cancel-modal .modal-id {
+      font-weight: 700;
+      color: var(--primary-light);
+    }
+
+    .cancel-modal .modal-btns {
+      display: flex;
+      gap: .75rem;
+    }
+
+    /* Refund Toast */
+    .refund-toast {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 3000;
+      background: linear-gradient(135deg, #059669, #10B981);
+      color: #fff;
+      padding: 1.25rem 1.75rem;
+      border-radius: 14px;
+      box-shadow: 0 20px 40px rgba(16, 185, 129, .35);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      animation: slideInRight .4s ease-out;
+      max-width: 420px;
+    }
+
+    .refund-toast .refund-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .2);
+      display: grid;
+      place-items: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .refund-toast .refund-text strong {
+      font-size: 1.1rem;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .refund-toast .refund-text span {
+      font-size: .85rem;
+      opacity: .9;
+    }
+
+    .refund-toast .refund-amount {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .cancel-modal .modal-btns .btn {
+      flex: 1;
+    }
+
+    @media(max-width:768px) {
+      .ticket-card {
+        flex-direction: column;
+      }
+
+      .ticket-card::before,
+      .cutout {
+        display: none;
+      }
+
+      .ticket-stub {
+        width: 100%;
+        border-top: 2px dashed #cbd5e1;
+        padding: 1.5rem;
+      }
+
+      .details-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .navbar,
+      .actions,
+      .success-bar,
+      .cancel-modal-overlay,
+      .cancel-policy {
+        display: none !important;
+      }
+
+      .ticket-wrapper {
+        padding: 0;
+      }
+
+      .ticket-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+      }
+
+      .cutout {
+        background: #fff;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="navbar">
+    <a href="/" class="logo"><i class="fa-solid fa-bus-simple"></i> SwiftBus</a>
+    <div class="nav-links" id="navLinks">
+      <a href="/"><i class="fa-solid fa-house"></i> Home</a>
+      <a href="/search"><i class="fa-solid fa-search"></i> Search</a>
+      <a href="/my-bookings"><i class="fa-solid fa-ticket"></i> My Bookings</a>
+      <a href="/tracking"><i class="fa-solid fa-location-dot"></i> Track</a>
+      <a href="#" onclick="logout();return false;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </div>
+  </nav>
+
+  <div class="ticket-wrapper">
+    <div class="success-bar" id="statusBar">
+      <i class="fa-solid fa-circle-check" style="font-size:1.3rem;"></i>
+      Booking Confirmed & Payment Successful!
+    </div>
+
+    <!-- Cancellation Policy -->
+    <div class="cancel-policy" id="cancelPolicyBox" style="width:100%; max-width:880px; margin-bottom:1.5rem;">
+      <h4><i class="fa-solid fa-shield-halved"></i> Cancellation Policy</h4>
+      <div class="policy-row"><span>More than 24 hours before departure</span><span class="refund full">100%
+          Refund</span></div>
+      <div class="policy-row"><span>12 – 24 hours before departure</span><span class="refund partial">50% Refund</span>
+      </div>
+      <div class="policy-row"><span>Less than 12 hours before departure</span><span class="refund none">No Refund</span>
+      </div>
+    </div>
+
+    <div class="ticket-card" id="ticketCard">
+      <div class="cutout top"></div>
+      <div class="cutout bottom"></div>
+
+      <div class="ticket-main">
+        <div class="tkt-header">
+          <div class="tkt-brand"><i class="fa-solid fa-bus-simple"></i> SwiftBus</div>
+          <div class="tkt-label">E-Ticket / Boarding Pass</div>
+        </div>
+
+        <div class="route-visual">
+          <div class="city-block">
+            <h3 id="tSource">—</h3>
+            <small>Origin</small>
+          </div>
+          <div class="path-line">
+            <div class="line"></div>
+            <i class="fa-solid fa-bus bus-icon-mid"></i>
+            <span class="bus-num-label" id="tBusNum">—</span>
+          </div>
+          <div class="city-block">
+            <h3 id="tDest">—</h3>
+            <small>Destination</small>
+          </div>
+        </div>
+
+        <div class="route-map">
+          <i class="fa-solid fa-map-location-dot" style="color:var(--primary);font-size:1.2rem;"></i>
+          <div class="map-dots">
+            <div class="map-stop">
+              <div class="map-dot"></div><small id="mapStart">—</small>
+            </div>
+            <div class="map-line"></div>
+            <div class="map-stop">
+              <div class="map-dot" style="background:var(--accent);"></div><small>En Route</small>
+            </div>
+            <div class="map-line"></div>
+            <div class="map-stop">
+              <div class="map-dot" style="background:var(--success);"></div><small id="mapEnd">—</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="details-grid">
+          <div class="d-box"><span>Passenger Name</span><span id="tName">—</span></div>
+          <div class="d-box"><span>Travel Date</span><span id="tDate">—</span></div>
+          <div class="d-box"><span>Departure Time</span><span id="tTime">—</span></div>
+          <div class="d-box"><span>Seat(s)</span><span id="tSeats" style="color:var(--primary);">—</span></div>
+          <div class="d-box"><span>Mobile</span><span id="tMobile">—</span></div>
+          <div class="d-box"><span>Email</span><span id="tEmail" style="font-size:.88rem;word-break:break-all;">—</span>
+          </div>
+          <div class="d-box"><span>Bus Type</span><span id="tBusType">—</span></div>
+          <div class="d-box"><span>Payment</span><span id="tPayment" style="color:var(--success);">—</span></div>
+          <div class="d-box"><span>Total Paid</span><span id="tTotal" style="color:var(--success);">—</span></div>
+        </div>
+      </div>
+
+      <div class="ticket-stub">
+        <div class="stub-label">Booking ID</div>
+        <div class="booking-id" id="tId">—</div>
+        <div id="qrcode"></div>
+        <div style="margin-top:0.5rem; padding:0.4rem 1rem; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.25); border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem; font-size:0.78rem; font-weight:700; color:#A5B4FC;">
+          <i class="fa-solid fa-qrcode"></i> Scan to Verify Ticket
+        </div>
+        <div class="stub-note" style="margin-top:0.6rem;">Present this QR code<br>at boarding for verification</div>
+      </div>
+    </div>
+
+    <div class="actions" id="ticketActions">
+      <button class="btn btn-primary" onclick="downloadPDF()"><i class="fa-solid fa-download"></i> Download PDF</button>
+      <a href="/tracking" class="btn btn-accent" style="color:#fff;"><i class="fa-solid fa-location-dot"></i> Track
+        Bus</a>
+      <button class="btn btn-danger" id="cancelTicketBtn"><i class="fa-solid fa-ban"></i> Cancel Booking</button>
+      <a href="/search" class="btn btn-outline" style="color:#fff;"><i class="fa-solid fa-magnifying-glass"></i>
+        Book Another</a>
+    </div>
+  </div>
+
+  <!-- Cancel Confirmation Modal -->
+  <div class="cancel-modal-overlay" id="cancelModal">
+    <div class="cancel-modal">
+      <div class="modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <h3>Cancel Booking?</h3>
+      <p>Are you sure you want to cancel booking <span class="modal-id" id="cancelModalId">—</span>?<br>
+        <span id="cancelPolicyText"></span><br>
+        Refund amount: <strong id="cancelModalAmount" style="color:#6EE7B7;">₹0</strong><br>
+        This action cannot be undone.
+      </p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" id="cancelModalNo" style="color:#fff;">
+          <i class="fa-solid fa-arrow-left"></i> Keep Booking
+        </button>
+        <button class="btn btn-danger" id="cancelModalYes">
+          <i class="fa-solid fa-ban"></i> Cancel Ticket
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/auth.js"></script>
+  <script>
+    // Cancellation policy engine
+    function getRefundInfo(booking) {
+      const now = new Date();
+      const travelDateStr = booking.date;
+      const travelTimeStr = booking.time;
+      let departureDate = null;
+
+      if (travelDateStr) {
+        departureDate = new Date(travelDateStr);
+        if (travelTimeStr) {
+          const timeParts = travelTimeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+          if (timeParts) {
+            let hours = parseInt(timeParts[1]);
+            const mins = parseInt(timeParts[2]);
+            const ampm = timeParts[3];
+            if (ampm) {
+              if (ampm.toUpperCase() === 'PM' && hours !== 12) hours += 12;
+              if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+            }
+            departureDate.setHours(hours, mins, 0, 0);
+          }
+        }
+      }
+
+      if (!departureDate) return { refundPct: 100, refundAmt: booking.totalPrice || 0, policyText: 'Full refund applicable' };
+
+      const hoursUntilDep = (departureDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const total = booking.totalPrice || 0;
+
+      if (hoursUntilDep > 24) return { refundPct: 100, refundAmt: total, policyText: 'More than 24 hours before departure — <strong style="color:#6EE7B7;">100% refund</strong>' };
+      if (hoursUntilDep > 12) return { refundPct: 50, refundAmt: Math.round(total * 0.5), policyText: '12-24 hours before departure — <strong style="color:#FBBF24;">50% refund</strong>' };
+      if (hoursUntilDep > 0) return { refundPct: 0, refundAmt: 0, policyText: 'Less than 12 hours before departure — <strong style="color:#FCA5A5;">No refund</strong>' };
+      return { refundPct: 0, refundAmt: 0, policyText: 'Bus has already departed — <strong style="color:#FCA5A5;">No refund</strong>' };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const data = localStorage.getItem('swiftbus_booking');
+      if (!data) { window.location.href = '/search'; return; }
+
+      const b = JSON.parse(data);
+      const isCancelled = b.status === 'cancelled';
+
+      document.getElementById('tSource').textContent = b.source;
+      document.getElementById('tDest').textContent = b.destination;
+      document.getElementById('tBusNum').textContent = b.busNumber;
+      document.getElementById('tName').textContent = b.fullName;
+      document.getElementById('tDate').textContent = b.date;
+      document.getElementById('tTime').textContent = b.time;
+      document.getElementById('tSeats').textContent = b.seats;
+      document.getElementById('tMobile').textContent = b.mobile;
+      document.getElementById('tEmail').textContent = b.email;
+      document.getElementById('tBusType').textContent = b.busType || '—';
+      document.getElementById('tPayment').textContent = b.paymentMethod || 'Paid';
+      document.getElementById('tTotal').textContent = `₹${b.totalPrice || 0}`;
+      document.getElementById('tId').textContent = b.id;
+      document.getElementById('mapStart').textContent = b.source;
+      document.getElementById('mapEnd').textContent = b.destination;
+
+      // QR Code — server-generated image (LAN IP URL) or client-side fallback
+      const qrContainer = document.getElementById('qrcode');
+      if (b.qr_code_url) {
+        const qrImg = document.createElement('img');
+        qrImg.src = b.qr_code_url;
+        qrImg.alt = 'Scan to verify ticket';
+        qrImg.style.cssText = 'width:140px;height:140px;border-radius:8px;display:block;box-shadow:0 4px 12px rgba(0,0,0,.25);';
+        // If the server image fails for any reason, fall back to client-side QR
+        qrImg.onerror = function () {
+          qrContainer.innerHTML = '';
+          const verifyUrl = (b.base_url || window.location.origin) + '/ticket/' + b.id;
+          new QRCode(qrContainer, {
+            text: verifyUrl, width: 136, height: 136,
+            colorDark: '#0f172a', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        };
+        qrContainer.appendChild(qrImg);
+      } else {
+        // Fallback: build QR client-side pointing to LAN base URL
+        const verifyUrl = (b.base_url || window.location.origin) + '/ticket/' + b.id;
+        new QRCode(qrContainer, {
+          text: verifyUrl, width: 136, height: 136,
+          colorDark: '#0f172a', colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+
+      if (isCancelled) showCancelledState();
+
+      // Cancel button
+      document.getElementById('cancelTicketBtn').addEventListener('click', () => {
+        const refundInfo = getRefundInfo(b);
+        document.getElementById('cancelModalId').textContent = b.id;
+        document.getElementById('cancelModalAmount').textContent = `₹${refundInfo.refundAmt}`;
+        document.getElementById('cancelPolicyText').innerHTML = refundInfo.policyText;
+
+        if (refundInfo.refundPct === 0) {
+          document.getElementById('cancelModalAmount').style.color = '#FCA5A5';
+        } else if (refundInfo.refundPct === 50) {
+          document.getElementById('cancelModalAmount').style.color = '#FBBF24';
+        }
+
+        document.getElementById('cancelModal').classList.add('show');
+      });
+
+      document.getElementById('cancelModalNo').addEventListener('click', () => {
+        document.getElementById('cancelModal').classList.remove('show');
+      });
+
+      document.getElementById('cancelModal').addEventListener('click', (e) => {
+        if (e.target.id === 'cancelModal') document.getElementById('cancelModal').classList.remove('show');
+      });
+
+      document.getElementById('cancelModalYes').addEventListener('click', async () => {
+        const refundInfo = getRefundInfo(b);
+
+        try {
+          const response = await fetch('/api/cancel-booking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ booking_id: b.id })
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            b.status = 'cancelled';
+            b.refundAmount = refundInfo.refundAmt;
+            b.refundPct = refundInfo.refundPct;
+            localStorage.setItem('swiftbus_booking', JSON.stringify(b));
+
+            document.getElementById('cancelModal').classList.remove('show');
+            showCancelledState();
+            showRefundToast(refundInfo.refundAmt, refundInfo.refundPct);
+          } else {
+            alert(data.message || 'Failed to cancel booking');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Error cancelling booking');
+        }
+      });
+
+      function showCancelledState() {
+        const refundInfo = getRefundInfo(b);
+        const bar = document.getElementById('statusBar');
+        bar.className = 'success-bar cancelled-bar';
+        bar.innerHTML = `<i class="fa-solid fa-circle-xmark" style="font-size:1.3rem;"></i> This booking has been cancelled. Refund of ₹${b.refundAmount || refundInfo.refundAmt} (${b.refundPct || refundInfo.refundPct}%) has been processed.`;
+        const cancelBtn = document.getElementById('cancelTicketBtn');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        document.getElementById('cancelPolicyBox').style.display = 'none';
+      }
+
+      function showRefundToast(amount, pct) {
+        const existing = document.querySelector('.refund-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'refund-toast';
+        toast.innerHTML = `
+          <div class="refund-icon"><i class="fa-solid fa-wallet"></i></div>
+          <div class="refund-text">
+            <strong>Refund Initiated!</strong>
+            <span>${pct}% refund credited to your account instantly</span>
+          </div>
+          <div class="refund-amount">₹${amount}</div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.style.animation = 'slideOutRight .4s ease-in forwards';
+          setTimeout(() => toast.remove(), 400);
+        }, 5000);
+      }
+    });
+
+    function downloadPDF() {
+      const card = document.getElementById('ticketCard');
+      const id = document.getElementById('tId').textContent;
+
+      // Briefly force desktop width and lock to top-left to avoid html2canvas clipping bugs
+      const wrapper = document.querySelector('.ticket-wrapper');
+      const oldAlign = wrapper.style.alignItems;
+      const oldPadding = wrapper.style.padding;
+      
+      wrapper.style.alignItems = 'flex-start';
+      wrapper.style.padding = '0';
+
+      const oldWidth = card.style.width;
+      const oldFlex = card.style.flexDirection;
+      const oldMargin = card.style.margin;
+      
+      card.style.width = '880px';
+      card.style.flexDirection = 'row';
+      card.style.margin = '0';
+      
+      // Make sure we capture from the top so it doesn't crop vertically
+      window.scrollTo(0, 0);
+
+      html2pdf().set({
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `SwiftBus_Ticket_${id}.pdf`,
+        image: { type: 'jpeg', quality: 1.0 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+      }).from(card).save().then(() => {
+        // Restore responsive styles after generation
+        wrapper.style.alignItems = oldAlign;
+        wrapper.style.padding = oldPadding;
+        card.style.width = oldWidth;
+        card.style.flexDirection = oldFlex;
+        card.style.margin = oldMargin;
+      });
+    }
+  </script>
+</body>
+
+</html>

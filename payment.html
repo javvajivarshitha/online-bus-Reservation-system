@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment — SwiftBus</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/" class="logo"><i class="fa-solid fa-bus-simple"></i> SwiftBus</a>
+    <div class="nav-links" id="navLinks">
+      <a href="/"><i class="fa-solid fa-house"></i> Home</a>
+      <a href="/search"><i class="fa-solid fa-search"></i> Search</a>
+      <a href="/my-bookings"><i class="fa-solid fa-ticket"></i> My Bookings</a>
+      <a href="#" onclick="logout();return false;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </div>
+  </nav>
+
+  <div class="payment-container">
+
+    <div class="payment-grid">
+      <!-- Booking Summary -->
+      <div class="glass payment-summary">
+      <h2 style="font-size:1.2rem; font-weight:700; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem;">
+        <i class="fa-solid fa-receipt"></i> Booking Summary
+      </h2>
+      <div class="summary-row"><span>Passenger</span><span id="payName">—</span></div>
+      <div class="summary-row"><span>Bus</span><span id="payBus">—</span></div>
+      <div class="summary-row"><span>Route</span><span id="payRoute">—</span></div>
+      <div class="summary-row"><span>Date & Time</span><span id="payDateTime">—</span></div>
+      <div class="summary-row"><span>Seats</span><span id="paySeats">—</span></div>
+      <div class="summary-row"><span>Price per seat</span><span id="payPerSeat">—</span></div>
+      <div class="summary-row" id="surgeRow" style="display:none;"><span>Base price <span class="dynamic-label">(before surge)</span></span><span id="payBasePrice">—</span></div>
+      <div class="summary-row total"><span>Total Amount</span><span id="payTotal">₹0</span></div>
+    </div>
+
+    <!-- Payment Method -->
+    <div class="glass" style="padding:1.5rem; margin-bottom:1.5rem;">
+      <h2 style="font-size:1.2rem; font-weight:700; margin-bottom:1.25rem; display:flex; align-items:center; gap:.5rem;">
+        <i class="fa-solid fa-credit-card"></i> Select Payment Method
+      </h2>
+
+      <div class="payment-methods" id="payMethods">
+        <div class="pay-method active" data-method="upi">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+          <span>UPI</span>
+        </div>
+        <div class="pay-method" data-method="wallet">
+          <i class="fa-solid fa-wallet"></i>
+          <span>Wallet</span>
+        </div>
+        <div class="pay-method" data-method="netbanking">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>Net Banking</span>
+        </div>
+      </div>
+
+      <!-- UPI Form -->
+      <div id="formUpi">
+        <div class="form-group">
+          <label for="upiId">UPI ID</label>
+          <div class="input-icon">
+            <i class="fa-solid fa-at"></i>
+            <input type="text" id="upiId" placeholder="Enter your UPI ID (e.g. name@upi)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Wallet Form -->
+      <div id="formWallet" class="hidden">
+        <div class="form-group">
+          <label for="walletSelect">Select Wallet</label>
+          <select id="walletSelect">
+            <option value="paytm">Paytm</option>
+            <option value="phonepe">PhonePe</option>
+            <option value="amazonpay">Amazon Pay</option>
+            <option value="mobikwik">MobiKwik</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Net Banking Form -->
+      <div id="formNetbanking" class="hidden">
+        <div class="form-group">
+          <label for="bankSelect">Select Bank</label>
+          <select id="bankSelect">
+            <option value="sbi">State Bank of India</option>
+            <option value="hdfc">HDFC Bank</option>
+            <option value="icici">ICICI Bank</option>
+            <option value="axis">Axis Bank</option>
+            <option value="kotak">Kotak Mahindra Bank</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="alertBox" class="alert"></div>
+
+    <button class="btn btn-success" id="payNowBtn" style="font-size:1.1rem; padding:1rem;">
+      <i class="fa-solid fa-lock"></i> Pay <span id="payBtnAmount">₹0</span>
+    </button>
+
+    <a href="/booking" class="btn btn-outline" style="margin-top:.75rem; color:#fff;">
+      <i class="fa-solid fa-arrow-left"></i> Back to Booking
+    </a>
+  </div>
+
+  <!-- Payment Processing Overlay -->
+  <div class="payment-overlay" id="paymentOverlay">
+    <div class="payment-processing">
+      <div class="spinner"></div>
+      <h3 id="processingTitle">Processing Payment</h3>
+      <p id="processingText">Please wait while we process your payment securely…</p>
+      <ul class="payment-steps" id="paymentSteps">
+        <li id="step1"><i class="fa-solid fa-spinner fa-spin"></i> Verifying payment details</li>
+        <li id="step2"><i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Connecting to payment gateway</li>
+        <li id="step3"><i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Processing transaction</li>
+        <li id="step4"><i class="fa-solid fa-circle" style="font-size:0.5rem;"></i> Generating ticket</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="/static/js/auth.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      // Auth guard
+      if (!localStorage.getItem('swiftbus_user')) { window.location.href = '/login'; return; }
+      
+      const booking = JSON.parse(localStorage.getItem('swiftbus_booking') || 'null');
+      if (!booking) { window.location.href = '/search'; return; }
+
+      // Populate summary
+      document.getElementById('payName').textContent     = booking.fullName;
+      document.getElementById('payBus').textContent      = `${booking.busNumber} (${booking.busType})`;
+      document.getElementById('payRoute').textContent    = `${booking.source} → ${booking.destination}`;
+      document.getElementById('payDateTime').textContent = `${booking.date} at ${booking.time}`;
+      document.getElementById('paySeats').textContent    = booking.seats;
+      document.getElementById('payPerSeat').textContent  = `₹${booking.pricePerSeat}`;
+      document.getElementById('payTotal').textContent    = `₹${booking.totalPrice}`;
+      document.getElementById('payBtnAmount').textContent = `₹${booking.totalPrice}`;
+
+      // Show surge pricing info
+      if (booking.basePrice && booking.pricePerSeat > booking.basePrice) {
+        document.getElementById('surgeRow').style.display = 'flex';
+        document.getElementById('payBasePrice').textContent = `₹${booking.basePrice} per seat`;
+      }
+
+      // Payment method switching
+      const methods = document.querySelectorAll('.pay-method');
+      const forms   = { upi: 'formUpi', wallet: 'formWallet', netbanking: 'formNetbanking' };
+
+      methods.forEach(m => {
+        m.addEventListener('click', function () {
+          methods.forEach(x => x.classList.remove('active'));
+          this.classList.add('active');
+          Object.values(forms).forEach(f => document.getElementById(f).classList.add('hidden'));
+          document.getElementById(forms[this.dataset.method]).classList.remove('hidden');
+        });
+      });
+
+      // Pay button with animated processing
+      document.getElementById('payNowBtn').addEventListener('click', function () {
+        const activeMethod = document.querySelector('.pay-method.active').dataset.method;
+        
+        // Basic Client-side Validation
+        if (activeMethod === 'upi') {
+          const upiId = document.getElementById('upiId').value.trim();
+          if (!upiId) return showAlert('Please enter a valid UPI ID (e.g. name@upi)', 'error');
+        } else if (activeMethod === 'wallet') {
+          const wallet = document.getElementById('walletSelect').value;
+          if (!wallet) return showAlert('Please select a wallet provider', 'error');
+        } else if (activeMethod === 'netbanking') {
+          const bank = document.getElementById('bankSelect').value;
+          if (!bank) return showAlert('Please select a bank', 'error');
+        }
+
+        this.disabled = true;
+        
+        // Show overlay
+        const overlay = document.getElementById('paymentOverlay');
+        overlay.classList.add('show');
+
+        const steps = ['step1', 'step2', 'step3', 'step4'];
+        const stepTimings = [400, 800, 1200, 1600];
+
+        // Animate steps
+        stepTimings.forEach((time, idx) => {
+          setTimeout(() => {
+            if (idx > 0) {
+              const prev = document.getElementById(steps[idx - 1]);
+              prev.classList.add('done');
+              prev.classList.remove('active');
+              prev.querySelector('i').className = 'fa-solid fa-circle-check';
+            }
+            const current = document.getElementById(steps[idx]);
+            current.classList.add('active');
+            current.querySelector('i').className = 'fa-solid fa-spinner fa-spin';
+          }, time);
+        });
+
+        // Complete
+        setTimeout(() => {
+          // Mark last step done
+          const lastStep = document.getElementById(steps[steps.length - 1]);
+          lastStep.classList.add('done');
+          lastStep.classList.remove('active');
+          lastStep.querySelector('i').className = 'fa-solid fa-circle-check';
+
+          // Mark booking as paid
+          booking.paymentStatus = 'Paid';
+          booking.paymentMethod = document.querySelector('.pay-method.active').dataset.method.toUpperCase();
+          localStorage.setItem('swiftbus_booking', JSON.stringify(booking));
+
+          // Save to history
+          const history = JSON.parse(localStorage.getItem('swiftbus_history') || '[]');
+          history.push(booking);
+          localStorage.setItem('swiftbus_history', JSON.stringify(history));
+
+          // Update overlay to success
+          document.getElementById('processingTitle').innerHTML = '<i class="fa-solid fa-circle-check" style="color:var(--success);"></i> Payment Successful!';
+          document.getElementById('processingText').textContent = 'Redirecting to your ticket…';
+          document.querySelector('.spinner').style.display = 'none';
+
+          setTimeout(() => { window.location.href = '/ticket'; }, 500);
+        }, 2000);
+      });
+    })();
+  </script>
+</body>
+</html>

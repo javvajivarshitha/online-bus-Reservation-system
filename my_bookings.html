@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Bookings — SwiftBus</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .bookings-container { max-width:1100px; margin:2rem auto; padding:0 1.5rem; animation:fadeUp .5s ease-out; }
+    .page-title { font-size:1.5rem; font-weight:700; margin-bottom:1.5rem; display:flex; align-items:center; gap:.6rem; }
+    .booking-list { display:flex; flex-direction:column; gap:1.25rem; }
+
+    .booking-card { padding:1.5rem; transition:transform var(--transition); }
+    .booking-card:hover { transform:translateY(-3px); }
+    .booking-card.cancelled-card { opacity:0.7; }
+    .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:.75rem; border-bottom:1px solid var(--glass-border); flex-wrap:wrap; gap:.5rem; }
+    .card-header .booking-id { font-weight:800; color:var(--primary-light); font-size:1.1rem; letter-spacing:1px; }
+    .card-header .booking-date { font-size:.82rem; color:var(--muted); }
+
+    .card-body { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:1rem; }
+    .card-field label { display:block; font-size:.72rem; text-transform:uppercase; color:var(--muted); font-weight:600; letter-spacing:.5px; margin-bottom:2px; }
+    .card-field span { font-size:.95rem; font-weight:600; }
+    .card-field .route-text { color:var(--accent); }
+    .card-field .seats-text { color:var(--primary-light); }
+    .card-field .paid-text { color:var(--success); }
+
+    .card-actions { display:flex; gap:.75rem; margin-top:1.25rem; padding-top:1rem; border-top:1px solid var(--glass-border); flex-wrap:wrap; }
+    .card-actions .btn { width:auto; padding:.55rem 1.25rem; font-size:.85rem; }
+
+    .empty-state { text-align:center; padding:4rem 2rem; color:var(--muted); }
+    .empty-state i { font-size:3.5rem; display:block; margin-bottom:1rem; color:var(--dark-3); }
+    .empty-state p { font-size:1.1rem; margin-bottom:1.5rem; }
+
+    .status-badge { display:inline-block; padding:.25rem .75rem; border-radius:20px; font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+    .status-confirmed { background:rgba(16,185,129,.15); color:#6EE7B7; border:1px solid rgba(16,185,129,.3); }
+    .status-cancelled { background:rgba(239,68,68,.15); color:#FCA5A5; border:1px solid rgba(239,68,68,.3); }
+
+    /* Refund Toast */
+    .refund-toast {
+      position:fixed; top:1.5rem; right:1.5rem; z-index:3000;
+      background:linear-gradient(135deg,#059669,#10B981); color:#fff;
+      padding:1.25rem 1.75rem; border-radius:14px;
+      box-shadow:0 20px 40px rgba(16,185,129,.35);
+      display:flex; align-items:center; gap:1rem;
+      animation:slideInRight .4s ease-out;
+      max-width:420px;
+    }
+    .refund-toast .refund-icon {
+      width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,.2);
+      display:grid; place-items:center; font-size:1.3rem; flex-shrink:0;
+    }
+    .refund-toast .refund-text strong { font-size:1.1rem; display:block; margin-bottom:2px; }
+    .refund-toast .refund-text span { font-size:.85rem; opacity:.9; }
+    .refund-toast .refund-amount { font-size:1.4rem; font-weight:800; margin-left:auto; white-space:nowrap; }
+    @keyframes slideInRight { from{opacity:0;transform:translateX(80px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes slideOutRight { from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(80px)} }
+
+    /* Cancel Confirmation Modal */
+    .cancel-modal-overlay {
+      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.65); backdrop-filter:blur(6px);
+      z-index:2000; align-items:center; justify-content:center;
+    }
+    .cancel-modal-overlay.show { display:flex; }
+    .cancel-modal {
+      background:var(--dark-2); border:1px solid var(--glass-border);
+      border-radius:var(--radius); padding:2rem; max-width:420px; width:90%;
+      text-align:center; box-shadow:0 30px 60px rgba(0,0,0,.5);
+      animation:fadeUp .3s ease-out;
+    }
+    .cancel-modal .modal-icon {
+      width:64px; height:64px; border-radius:50%; margin:0 auto 1.25rem;
+      display:grid; place-items:center; font-size:1.6rem;
+      background:rgba(239,68,68,.15); color:#FCA5A5; border:1px solid rgba(239,68,68,.3);
+    }
+    .cancel-modal h3 { font-size:1.2rem; font-weight:700; margin-bottom:.5rem; }
+    .cancel-modal p { color:var(--muted); font-size:.9rem; margin-bottom:1.5rem; line-height:1.6; }
+    .cancel-modal .modal-id { font-weight:700; color:var(--primary-light); }
+    .cancel-modal .modal-btns { display:flex; gap:.75rem; }
+    .cancel-modal .modal-btns .btn { flex:1; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/" class="logo"><i class="fa-solid fa-bus-simple"></i> SwiftBus</a>
+    <div class="nav-links" id="navLinks">
+      <a href="/"><i class="fa-solid fa-house"></i> Home</a>
+      <a href="/search"><i class="fa-solid fa-search"></i> Search</a>
+      <a href="/my-bookings" class="active"><i class="fa-solid fa-ticket"></i> My Bookings</a>
+      <a href="/tracking"><i class="fa-solid fa-location-dot"></i> Track</a>
+      <a href="#" onclick="logout();return false;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </div>
+  </nav>
+
+  <div class="bookings-container">
+    <h1 class="page-title"><i class="fa-solid fa-clock-rotate-left"></i> My Bookings</h1>
+    <div id="bookingsList" class="booking-list">
+      {% if bookings %}
+        {% for b in bookings %}
+          {% set is_cancelled = (b.status and b.status|lower == 'cancelled') %}
+          <div class="booking-card glass {{ 'cancelled-card' if is_cancelled else '' }}" id="booking-{{ b.id }}">
+            <div class="card-header">
+              <div>
+                <span class="booking-id">#{{ b.id }}</span>
+                {% if is_cancelled %}
+                  <span class="status-badge status-cancelled" style="margin-left:.75rem;">
+                    <i class="fa-solid fa-circle-xmark" style="font-size:.6rem;"></i> Cancelled
+                  </span>
+                {% else %}
+                  <span class="status-badge status-confirmed" style="margin-left:.75rem;">
+                    <i class="fa-solid fa-circle-check" style="font-size:.6rem;"></i> Confirmed
+                  </span>
+                {% endif %}
+              </div>
+              <span class="booking-date"><i class="fa-regular fa-clock"></i> Booked on {{ b.booking_date }}</span>
+            </div>
+
+            <div class="card-body">
+              <div class="card-field">
+                <label>Passenger</label>
+                <span>{{ b.passenger_name }}</span>
+              </div>
+              <div class="card-field">
+                <label>Route</label>
+                <span class="route-text">{{ b.from_city }} → {{ b.to_city }}</span>
+              </div>
+              <div class="card-field">
+                <label>Bus</label>
+                <span>{{ b.bus_name }} ({{ b.bus_type }})</span>
+              </div>
+              <div class="card-field">
+                <label>Travel Date</label>
+                <span>{{ b.travel_date }}</span>
+              </div>
+              <div class="card-field">
+                <label>Departure</label>
+                <span>{{ b.travel_time }}</span>
+              </div>
+              <div class="card-field">
+                <label>Seats</label>
+                <span class="seats-text">{{ b.seats }} Seats</span>
+              </div>
+              <div class="card-field">
+                <label>Mobile</label>
+                <span>{{ b.passenger_mobile }}</span>
+              </div>
+              <div class="card-field">
+                <label>Total Paid</label>
+                <span class="{{ '' if is_cancelled else 'paid-text' }}">₹{{ b.total_price }}{{ ' (Refundable)' if is_cancelled else '' }}</span>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              {% if is_cancelled %}
+                <span style="color:var(--muted);font-size:.88rem;font-weight:500;">
+                  <i class="fa-solid fa-ban"></i> This booking has been cancelled
+                </span>
+              {% else %}
+                <button class="btn btn-primary js-view-ticket" data-id="{{ b.id }}">
+                  <i class="fa-solid fa-eye"></i> View Ticket
+                </button>
+                <button class="btn btn-accent js-view-ticket" data-id="{{ b.id }}">
+                  <i class="fa-solid fa-download"></i> Download Ticket
+                </button>
+                <a href="/tracking" class="btn btn-outline" style="color:#fff;">
+                  <i class="fa-solid fa-location-dot"></i> Track Bus
+                </a>
+                <button class="btn btn-danger js-cancel-ticket" data-id="{{ b.id }}" data-price="{{ b.total_price }}">
+                  <i class="fa-solid fa-ban"></i> Cancel Ticket
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state glass">
+          <i class="fa-solid fa-suitcase-rolling"></i>
+          <p>You haven't made any bookings yet</p>
+          <a href="/search" class="btn btn-primary" style="width:auto;padding:.7rem 2rem;">
+            <i class="fa-solid fa-search"></i> Search & Book a Bus
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Cancel Confirmation Modal -->
+  <div class="cancel-modal-overlay" id="cancelModal">
+    <div class="cancel-modal">
+      <div class="modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <h3>Cancel Booking?</h3>
+      <p>Are you sure you want to cancel booking <span class="modal-id" id="cancelModalId">—</span>?<br>
+      Refund of <strong id="cancelModalAmount" style="color:#6EE7B7;">₹0</strong> will be credited instantly.<br>
+      This action cannot be undone.</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" id="cancelModalNo" style="color:#fff;">
+          <i class="fa-solid fa-arrow-left"></i> Keep Booking
+        </button>
+        <button class="btn btn-danger" id="cancelModalYes">
+          <i class="fa-solid fa-ban"></i> Cancel Ticket
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/auth.js"></script>
+  <script id="bookings-data" type="application/json">
+    {{ bookings|tojson }}
+  </script>
+  <script>
+    (function () {
+      'use strict';
+
+      let userBookings = [];
+      try {
+        const dataEl = document.getElementById('bookings-data');
+        if (dataEl) userBookings = JSON.parse(dataEl.textContent);
+      } catch (e) {
+        console.error("Failed to parse bookings data", e);
+      }
+
+      // View/Download ticket
+      window.viewTicket = function (bookingId) {
+        const booking = userBookings.find(b => b.id === bookingId);
+        if (!booking) return;
+        
+        // Map backend names to what ticket.html expects
+        const legacyBooking = {
+          id: booking.id,
+          fullName: booking.passenger_name,
+          busNumber: booking.bus_name,
+          busType: booking.bus_type,
+          source: booking.from_city,
+          destination: booking.to_city,
+          time: booking.travel_time,
+          date: booking.travel_date,
+          seats: booking.seats,
+          totalPrice: booking.total_price,
+          status: (booking.status || 'confirmed').toLowerCase(),
+          bookedAt: booking.booking_date
+        };
+        localStorage.setItem('swiftbus_booking', JSON.stringify(legacyBooking));
+        window.location.href = '/ticket';
+      };
+
+      // Cancel ticket — modal logic
+      let currentCancelId = null;
+      const modalEl = document.getElementById('cancelModal');
+      const modalIdEl = document.getElementById('cancelModalId');
+
+      window.showCancelModal = function (id, price) {
+        currentCancelId = id;
+        modalIdEl.textContent = '#' + id;
+        document.getElementById('cancelModalAmount').textContent = `₹${price}`;
+        modalEl.classList.add('show');
+      };
+
+      document.getElementById('cancelModalNo').addEventListener('click', () => {
+        modalEl.classList.remove('show');
+        currentCancelId = null;
+      });
+
+      modalEl.addEventListener('click', (e) => {
+        if (e.target === modalEl) {
+          modalEl.classList.remove('show');
+          currentCancelId = null;
+        }
+      });
+
+      document.getElementById('cancelModalYes').addEventListener('click', async () => {
+        if (!currentCancelId) return;
+
+        try {
+          const response = await fetch('/api/cancel-booking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ booking_id: currentCancelId })
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            modalEl.classList.remove('show');
+            showRefundToast(document.getElementById('cancelModalAmount').textContent.replace('₹', ''));
+            setTimeout(() => location.reload(), 1500); // Reload to reflect status from server
+          } else {
+            alert(data.message || 'Failed to cancel booking');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Error cancelling booking');
+        }
+      });
+
+      function showRefundToast(amount) {
+        const toast = document.createElement('div');
+        toast.className = 'refund-toast';
+        toast.innerHTML = `
+          <div class="refund-icon"><i class="fa-solid fa-wallet"></i></div>
+          <div class="refund-text">
+            <strong>Refund Initiated!</strong>
+            <span>Amount credited to your account instantly</span>
+          </div>
+          <div class="refund-amount">₹${amount}</div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.style.animation = 'slideOutRight .4s ease-in forwards';
+          setTimeout(() => toast.remove(), 400);
+        }, 5000);
+      }
+
+      // Attach event listeners to buttons using data attributes
+      // This avoids IDE syntax highlighting errors caused by Jinja templating in inline JS
+      document.querySelectorAll('.js-view-ticket').forEach(btn => {
+        btn.addEventListener('click', function() {
+          viewTicket(parseInt(this.dataset.id, 10));
+        });
+      });
+
+      document.querySelectorAll('.js-cancel-ticket').forEach(btn => {
+        btn.addEventListener('click', function() {
+          showCancelModal(this.dataset.id, this.dataset.price);
+        });
+      });
+
+    })();
+  </script>
+</body>
+</html>

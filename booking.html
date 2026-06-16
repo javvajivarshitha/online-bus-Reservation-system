@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking — SwiftBus</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="booking-page">
+    <nav class="navbar">
+        <a href="/" class="logo"><i class="fa-solid fa-bus-simple"></i> SwiftBus</a>
+        <div class="nav-links">
+            <a href="/"><i class="fa-solid fa-house"></i> Home</a>
+            <a href="/search"><i class="fa-solid fa-magnifying-glass"></i> Search</a>
+            <a href="/my-bookings"><i class="fa-solid fa-ticket"></i> My Bookings</a>
+            <a href="#" onclick="logout();return false;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+        </div>
+    </nav>
+
+    <div class="booking-container" style="display:flex; flex-wrap:wrap; justify-content:center; gap:30px; padding:40px 20px; max-width:1200px; margin:0 auto; align-items: flex-start;">
+        
+        <!-- Left Column: Details -->
+        <div class="glass form-box wide" style="flex:1 1 400px; max-width:500px; margin:0;">
+            <h2><i class="fa-solid fa-user-check"></i> <span id="welcomeUser">Passenger</span></h2>
+            <p style="margin-bottom:20px; color:#bbb; font-size:0.9rem;">Review and complete your booking details.</p>
+            
+            <div id="dynamicPriceInfo" style="display:none; background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:12px; margin-bottom:15px; border-radius:4px; align-items:center;">
+                <i class="fa-solid fa-fire" style="color:#ef4444; margin-right:10px; font-size:1.2rem;"></i>
+                <span id="dynamicPriceText" style="font-size:0.85rem; color:#fca5a5;"></span>
+            </div>
+            
+            <div id="selectedPrefs" style="margin-bottom:20px;"></div>
+            
+            <form id="bookingForm">
+                <!-- Hidden inputs for bus tracking -->
+                <input type="hidden" id="busId">
+                <input type="hidden" id="busType">
+                <input type="hidden" id="source">
+                <input type="hidden" id="destination">
+                <input type="hidden" id="travelDate">
+                <input type="hidden" id="depTime">
+                
+                <div class="form-group">
+                    <label>Passenger Name</label>
+                    <div class="input-icon">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="bName" style="background:rgba(255,255,255,0.1); color:#fff;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Mobile Number</label>
+                    <div class="input-icon">
+                        <i class="fa-solid fa-phone"></i>
+                        <input type="text" id="bMobile" style="background:rgba(255,255,255,0.1); color:#fff;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <div class="input-icon">
+                        <i class="fa-regular fa-envelope"></i>
+                        <input type="email" id="bEmail" style="background:rgba(255,255,255,0.1); color:#fff;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Price Per Seat</label>
+                    <div class="input-icon">
+                        <i class="fa-solid fa-indian-rupee-sign"></i>
+                        <input type="text" id="pricePerSeat" readonly style="background:rgba(255,255,255,0.1); color:#fff;">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:20px;">
+                    <label>Selected Seats (<span id="seatCount">0</span>)</label>
+                    <div class="input-icon">
+                        <i class="fa-solid fa-couch"></i>
+                        <input type="text" id="seatsList" readonly placeholder="Click map to select seats" style="background:rgba(0,0,0,0.3); color:#2ecc71; font-weight:bold;">
+                    </div>
+                </div>
+                
+                <div style="font-size:1.2rem; font-weight:bold; margin:25px 0 20px; display:flex; justify-content:space-between; padding-top:15px; border-top:1px solid rgba(255,255,255,0.2);">
+                    <span>Total Amount:</span>
+                    <span id="totalAmount" style="color:#2ecc71;">₹0</span>
+                </div>
+                
+                <button type="submit" id="confirmBtn" class="btn btn-primary" disabled>
+                    <i class="fa-solid fa-lock"></i> Confirm Booking
+                </button>
+            </form>
+        </div>
+        
+        <!-- Right Column: Seat Map -->
+        <div class="glass form-box wide" style="flex:1 1 400px; max-width:600px; text-align:center; margin:0;">
+            <h2><i class="fa-solid fa-map-location-dot"></i> Select Seats</h2>
+            
+            <div style="margin:15px 0;">
+                <button type="button" id="suggestBtn" class="btn btn-accent" style="width:auto; font-size:0.85rem; padding:8px 16px;">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI Auto-Suggest
+                </button>
+            </div>
+            
+            <div id="recommendBox" style="display:none; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.5); padding:10px; border-radius:8px; font-size:0.85rem; margin-bottom:15px; text-align:left;">
+                <i class="fa-solid fa-lightbulb" style="color:#f59e0b; margin-right:5px;"></i> <span id="recText"></span>
+            </div>
+            
+            <div style="display:flex; justify-content:center; gap:10px; font-size:0.8rem; margin-bottom:10px; flex-wrap:wrap;">
+                <span style="display:flex; align-items:center; gap:5px;"><div style="width:14px;height:14px;background:#2ecc71;border-radius:3px;"></div> Available</span>
+                <span style="display:flex; align-items:center; gap:5px;"><div style="width:14px;height:14px;background:#e74c3c;border-radius:3px;"></div> Booked</span>
+                <span style="display:flex; align-items:center; gap:5px;"><div style="width:14px;height:14px;background:#ff69b4;border-radius:3px;"></div> Female</span>
+            </div>
+            <div style="display:flex; justify-content:center; gap:10px; font-size:0.8rem; margin-bottom:20px; flex-wrap:wrap;">
+                <span style="display:flex; align-items:center; gap:5px;"><div style="width:14px;height:14px;background:#8e44ad;border-radius:3px;"></div> Male</span>
+                <span style="display:flex; align-items:center; gap:5px;"><div style="width:14px;height:14px;border:2px solid yellow;border-radius:3px;background:rgba(255,255,0,0.2);"></div> Selected</span>
+                <span style="display:flex; align-items:center; gap:5px;"><div style="width:14px;height:14px;border:2px solid #f59e0b;border-radius:3px;background:rgba(245,158,11,0.2);"></div> Suggested</span>
+            </div>
+            
+            <div style="background:rgba(0,0,0,0.2); border-radius:15px; padding:20px 10px; position:relative;">
+                <div style="font-size:1.5rem; color:#aaa; margin-bottom:10px; text-align:right; padding-right:15px;">
+                    <i class="fa-solid fa-steering-wheel" title="Driver's Seat"></i>
+                </div>
+                <!-- Expected from js/booking.js to populate inside #seatMap -->
+                <div id="seatMap" class="seat-container" style="margin-top:0;"></div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/booking.js"></script>
+</body>
+</html>

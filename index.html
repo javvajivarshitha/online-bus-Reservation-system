@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwiftBus — Online Bus Reservation System</title>
+  <meta name="description" content="Book bus tickets online with SwiftBus. Search routes, choose seats, pay online and download e-tickets instantly.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <a href="/" class="logo"><i class="fa-solid fa-bus-simple"></i> SwiftBus</a>
+    <div class="nav-links" id="navLinks">
+      <a href="/" class="active">Home</a>
+      <a href="/search">Search Buses</a>
+      <a href="/login">Login</a>
+      <a href="/register">Register</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Travel Smarter,<br>Book Faster</h1>
+    <p>Search routes, pick your favourite seat, pay online and download your e-ticket — all in one place.</p>
+    <div class="hero-buttons">
+      <a href="/search" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Search Buses</a>
+      <a href="/login" class="btn btn-accent"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
+      <a href="/register" class="btn btn-outline" style="color:#fff;"><i class="fa-solid fa-user-plus"></i> Register</a>
+    </div>
+  </section>
+
+  <!-- Animated Stats -->
+  <section class="stats-section">
+    <div class="stat-card glass">
+      <div class="stat-icon"><i class="fa-solid fa-bus"></i></div>
+      <div class="stat-number" data-target="500">0</div>
+      <div class="stat-label">Active Buses</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-icon" style="background:linear-gradient(135deg,var(--success),var(--success-dark));"><i class="fa-solid fa-route"></i></div>
+      <div class="stat-number" data-target="120">0</div>
+      <div class="stat-label">Routes Covered</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-icon" style="background:linear-gradient(135deg,var(--accent),var(--accent-dark));"><i class="fa-solid fa-face-smile"></i></div>
+      <div class="stat-number" data-target="50000">0</div>
+      <div class="stat-label">Happy Travelers</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-icon" style="background:linear-gradient(135deg,var(--pink),#DB2777);"><i class="fa-solid fa-city"></i></div>
+      <div class="stat-number" data-target="45">0</div>
+      <div class="stat-label">Cities Connected</div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="feature-card glass">
+      <div class="icon"><i class="fa-solid fa-magnifying-glass-location"></i></div>
+      <h3>Smart Search</h3>
+      <p>Find buses by route, date, and type with real-time availability.</p>
+    </div>
+    <div class="feature-card glass">
+      <div class="icon" style="background:linear-gradient(135deg,var(--cyan),#0891B2);"><i class="fa-solid fa-couch"></i></div>
+      <h3>AI Seat Suggestion</h3>
+      <p>Smart recommendations based on gender, group size & preference.</p>
+    </div>
+    <div class="feature-card glass">
+      <div class="icon" style="background:linear-gradient(135deg,var(--success),var(--success-dark));"><i class="fa-solid fa-credit-card"></i></div>
+      <h3>Online Payment</h3>
+      <p>Pay securely with Card, UPI, Wallet or Net Banking.</p>
+    </div>
+    <div class="feature-card glass">
+      <div class="icon" style="background:linear-gradient(135deg,var(--accent),var(--accent-dark));"><i class="fa-solid fa-location-dot"></i></div>
+      <h3>Live Tracking</h3>
+      <p>Simulate real-time bus location on an interactive map.</p>
+    </div>
+    <div class="feature-card glass">
+      <div class="icon" style="background:linear-gradient(135deg,var(--pink),#DB2777);"><i class="fa-solid fa-chart-line"></i></div>
+      <h3>Dynamic Pricing</h3>
+      <p>Prices adjust based on demand and seat availability in real-time.</p>
+    </div>
+    <div class="feature-card glass">
+      <div class="icon" style="background:linear-gradient(135deg,var(--purple),#7C3AED);"><i class="fa-solid fa-shield-halved"></i></div>
+      <h3>Admin Dashboard</h3>
+      <p>Manage buses, view bookings & track revenue analytics.</p>
+    </div>
+  </section>
+
+  <!-- Share Feedback Section -->
+  <section class="feedback-section glass" style="max-width: 600px; margin: 40px auto; padding: 30px; text-align: center;">
+    <h2><i class="fa-solid fa-star" style="color:#FBBF24;"></i> Share Your Experience</h2>
+    <p style="margin-bottom: 20px; font-size:0.9rem; color:#cbd5e1;">We'd love to hear about your recent trip with us!</p>
+    
+    <div class="rating-stars" id="starSelector" style="font-size: 2rem; color: #475569; margin-bottom: 15px; cursor: pointer;">
+      <i class="fa-solid fa-star" data-rating="1"></i>
+      <i class="fa-solid fa-star" data-rating="2"></i>
+      <i class="fa-solid fa-star" data-rating="3"></i>
+      <i class="fa-solid fa-star" data-rating="4"></i>
+      <i class="fa-solid fa-star" data-rating="5"></i>
+    </div>
+    <input type="hidden" id="feedbackRating" value="0">
+    
+    <div class="form-group" style="text-align: left;">
+      <input type="text" id="feedbackName" placeholder="Your Name" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">
+    </div>
+    <div class="form-group" style="text-align: left;">
+      <textarea id="feedbackComment" placeholder="Tell us how we can improve..." style="width: 100%; height: 100px; padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; outline: none; font-family: inherit; resize: vertical;"></textarea>
+    </div>
+    <button id="submitFeedbackBtn" class="btn btn-primary" style="width: 100%;">Submit Feedback</button>
+    <div id="feedbackAlert" style="margin-top: 15px; font-size: 0.9rem; font-weight: 600; display:none;"></div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="testimonials">
+    <h2><i class="fa-solid fa-quote-left" style="color:var(--primary-light);"></i> What Travelers Say</h2>
+    <div class="testimonial-grid">
+      <div class="testimonial-card glass">
+        <div class="stars">★★★★★</div>
+        <div class="quote">"Booking was incredibly smooth! The smart seat suggestion placed me near other female passengers — felt very safe."</div>
+        <div class="author">
+          <div class="avatar">P</div>
+          <div class="author-info">
+            <div class="name">Priya Sharma</div>
+            <div class="route">Delhi → Jaipur</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card glass">
+        <div class="stars">★★★★★</div>
+        <div class="quote">"Love the live tracking feature! Could track my bus in real-time. The e-ticket with QR code is brilliant."</div>
+        <div class="author">
+          <div class="avatar" style="background:linear-gradient(135deg,var(--success),var(--cyan));">R</div>
+          <div class="author-info">
+            <div class="name">Rahul Verma</div>
+            <div class="route">Hyderabad → Bangalore</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card glass">
+        <div class="stars">★★★★★</div>
+        <div class="quote">"Cancelled my ticket and got an instant refund — no questions asked. Best bus booking platform!"</div>
+        <div class="author">
+          <div class="avatar" style="background:linear-gradient(135deg,var(--accent),var(--pink));">A</div>
+          <div class="author-info">
+            <div class="name">Ananya Reddy</div>
+            <div class="route">Mumbai → Pune</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo"><i class="fa-solid fa-bus-simple"></i> SwiftBus</div>
+        <p>India's smartest bus booking platform with AI-powered seat suggestions, live tracking, and instant refunds.</p>
+        <div class="footer-social">
+          <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="#"><i class="fa-brands fa-twitter"></i></a>
+          <a href="#"><i class="fa-brands fa-instagram"></i></a>
+          <a href="#"><i class="fa-brands fa-linkedin-in"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Quick Links</h4>
+        <a href="/search">Search Buses</a>
+        <a href="/my-bookings">My Bookings</a>
+        <a href="/tracking">Track Bus</a>
+        <a href="admin.html">Admin Panel</a>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <a href="#">Help Center</a>
+        <a href="#">Cancellation Policy</a>
+        <a href="#">FAQs</a>
+        <a href="#">Contact Us</a>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <a href="#"><i class="fa-solid fa-envelope"></i> support@swiftbus.in</a>
+        <a href="#"><i class="fa-solid fa-phone"></i> 1800-123-4567</a>
+        <a href="#"><i class="fa-solid fa-location-dot"></i> Hyderabad, India</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 SwiftBus. All rights reserved.</span>
+      <span>Made with <i class="fa-solid fa-heart" style="color:var(--danger);"></i> for smart travelers</span>
+    </div>
+  </footer>
+
+  <script src="/static/js/auth.js"></script>
+  <script>
+    // Update nav if logged in
+    if (localStorage.getItem('swiftbus_user')) {
+      document.getElementById('navLinks').innerHTML = `
+        <a href="/" class="active">Home</a>
+        <a href="/search">Search Buses</a>
+        <a href="/my-bookings"><i class="fa-solid fa-ticket"></i> My Bookings</a>
+        <a href="/tracking"><i class="fa-solid fa-location-dot"></i> Track Bus</a>
+        <a href="#" onclick="logout();return false;">Logout</a>
+      `;
+    }
+
+    // Animated counter
+    const counters = document.querySelectorAll('.stat-number');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          const target = +el.dataset.target;
+          const duration = 2000;
+          const step = target / (duration / 16);
+          let current = 0;
+          const timer = setInterval(() => {
+            current += step;
+            if (current >= target) { current = target; clearInterval(timer); }
+            el.textContent = current >= 1000
+              ? Math.floor(current).toLocaleString('en-IN') + (target >= 10000 ? '+' : '')
+              : Math.floor(current) + '+';
+          }, 16);
+          observer.unobserve(el);
+        }
+      });
+    }, { threshold: 0.5 });
+    counters.forEach(c => observer.observe(c));
+
+    // Feedback Stars Interaction
+    const stars = document.querySelectorAll('#starSelector i');
+    const ratingInput = document.getElementById('feedbackRating');
+    let currentRating = 0;
+
+    stars.forEach(star => {
+      star.addEventListener('mouseover', function() {
+        const value = parseInt(this.getAttribute('data-rating'));
+        highlightStars(value);
+      });
+      star.addEventListener('mouseout', function() {
+        highlightStars(currentRating);
+      });
+      star.addEventListener('click', function() {
+        currentRating = parseInt(this.getAttribute('data-rating'));
+        ratingInput.value = currentRating;
+        highlightStars(currentRating);
+      });
+    });
+
+    function highlightStars(count) {
+      stars.forEach((star, idx) => {
+        if (idx < count) {
+          star.style.color = '#FBBF24'; // Yellow
+        } else {
+          star.style.color = '#475569'; // Grey
+        }
+      });
+    }
+
+    // Submit Feedback
+    document.getElementById('submitFeedbackBtn').addEventListener('click', async function() {
+      const name = document.getElementById('feedbackName').value.trim();
+      const comment = document.getElementById('feedbackComment').value.trim();
+      const rating = parseInt(ratingInput.value);
+      const alertBox = document.getElementById('feedbackAlert');
+
+      if (!rating || rating === 0) {
+        showAlert('Please select a star rating.', '#ef4444');
+        return;
+      }
+      if (!name || !comment) {
+        showAlert('Please provide your name and a comment.', '#ef4444');
+        return;
+      }
+
+      const btn = this;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, rating, comment })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          showAlert(data.message, '#10b981'); // Green success
+          document.getElementById('feedbackName').value = '';
+          document.getElementById('feedbackComment').value = '';
+          currentRating = 0;
+          ratingInput.value = 0;
+          highlightStars(0);
+          fetchTestimonials(); // Refresh grid below
+        } else {
+          showAlert(data.message || 'Error saving feedback', '#ef4444');
+        }
+      } catch (e) {
+        showAlert('Network error. Please try again.', '#ef4444');
+      } finally {
+        btn.innerHTML = 'Submit Feedback';
+        btn.disabled = false;
+      }
+
+      function showAlert(msg, color) {
+        alertBox.style.display = 'block';
+        alertBox.style.color = color;
+        alertBox.textContent = msg;
+        setTimeout(() => alertBox.style.display = 'none', 4000);
+      }
+    });
+
+    // Fetch and Load Dynamic Testimonials
+    async function fetchTestimonials() {
+      try {
+        const response = await fetch('/api/testimonials');
+        const data = await response.json();
+        if (data.success && data.testimonials.length > 0) {
+          const grid = document.querySelector('.testimonial-grid');
+          grid.innerHTML = ''; // Clear hardcoded ones
+          data.testimonials.forEach(t => {
+            const starsHTML = '★'.repeat(t.rating) + '☆'.repeat(5 - t.rating);
+            grid.innerHTML += `
+              <div class="testimonial-card glass">
+                <div class="stars" style="color:#FBBF24;">${starsHTML}</div>
+                <div class="quote">"${t.comment}"</div>
+                <div class="author">
+                  <div class="avatar" style="background:linear-gradient(135deg,var(--accent),var(--cyan));">${t.name.charAt(0).toUpperCase()}</div>
+                  <div class="author-info">
+                    <div class="name">${t.name}</div>
+                    <div class="route" style="font-size:0.75rem;">Verified Traveler • ${t.created_at}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+        }
+      } catch (e) {
+        console.warn("Could not fetch testimonials:", e);
+      }
+    }
+
+    // Load on start
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchTestimonials();
+      
+      // Prefill user details if logged in
+      const userStr = localStorage.getItem('swiftbus_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        document.getElementById('feedbackName').value = user.username || '';
+      }
+    });
+  </script>
+</body>
+</html>

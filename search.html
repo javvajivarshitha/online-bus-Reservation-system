@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Buses — SwiftBus</title>
+
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body class="search-page">
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="/" class="logo"><i class="fa-solid fa-bus-simple"></i> SwiftBus</a>
+  <div class="nav-links" id="navLinks">
+    <a href="/">Home</a>
+    <a href="/search" class="active">Search Buses</a>
+    <a href="/login">Login</a>
+    <a href="/register">Register</a>
+  </div>
+</nav>
+
+<div class="search-container">
+
+  <!-- SEARCH FORM -->
+  <div class="glass" style="padding:2rem; margin-bottom:2rem;">
+    <h2 style="margin-bottom:1.5rem;">
+      <i class="fa-solid fa-magnifying-glass-location"></i> Find Your Bus
+    </h2>
+
+    <!-- ❗ IMPORTANT: remove action/method (JS handles submit) -->
+    <form id="searchForm">
+
+      <div class="form-row">
+
+        <!-- SOURCE -->
+        <div class="form-group">
+          <label>Source City</label>
+          <select id="searchSource" required>
+            <option value="">Select Source</option>
+            <option value="Hyderabad">Hyderabad</option>
+            <option value="Bangalore">Bangalore</option>
+            <option value="Chennai">Chennai</option>
+            <option value="Mumbai">Mumbai</option>
+          </select>
+        </div>
+
+        <!-- DESTINATION -->
+        <div class="form-group">
+          <label>Destination City</label>
+          <select id="searchDest" required>
+            <option value="">Select Destination</option>
+            <option value="Hyderabad">Hyderabad</option>
+            <option value="Bangalore">Bangalore</option>
+            <option value="Chennai">Chennai</option>
+            <option value="Mumbai">Mumbai</option>
+          </select>
+        </div>
+
+        <!-- DATE -->
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="searchDate" required>
+        </div>
+
+        <!-- BUS TYPE -->
+        <div class="form-group">
+          <label>Bus Type</label>
+          <select id="searchType">
+            <option value="All">All Types</option>
+            <option value="AC">AC</option>
+            <option value="Non-AC">Non-AC</option>
+            <option value="Luxury">Luxury</option>
+            <option value="Super Luxury">Super Luxury</option>
+            <option value="Deluxe">Deluxe</option>
+          </select>
+        </div>
+
+        <!-- BUTTON -->
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary">
+            Search
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsArea">
+    <p style="text-align:center; padding:2rem;">
+      Search for buses to see results
+    </p>
+  </div>
+
+</div>
+
+<!-- SCRIPTS -->
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/search.js"></script>
+
+<script>
+if (localStorage.getItem('swiftbus_user')) {
+  document.getElementById('navLinks').innerHTML = `
+    <a href="/">Home</a>
+    <a href="/search" class="active">Search</a>
+    <a href="/my-bookings">My Bookings</a>
+    <a href="#" onclick="logout();return false;">Logout</a>
+  `;
+}
+</script>
+
+</body>
+</html>
